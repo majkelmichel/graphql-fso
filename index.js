@@ -90,10 +90,16 @@ const resolvers = {
 		addBook: async (root, args) => {
 			let author = await Author.findOne({ name: args.author });
 			console.log(author);
-			if (author.length === 0) {
+			if (!author) {
 				const name = args.author;
 				const newAuthor = new Author({ name });
-				await newAuthor.save();
+				try {
+					await newAuthor.save();
+				} catch (error) {
+					throw new UserInputError(error.message, {
+						invalidArgs: args
+					});
+				}
 				author = newAuthor;
 			}
 			const book = new Book({ ...args, author: author._id });
