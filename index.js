@@ -90,7 +90,13 @@ const resolvers = {
 			await Book.find({})).length, // works
 		authorCount: async () => (
 			await Author.find({})).length, // works
-		allBooks: async (_root, _args) => Book.find({}).populate('author'), // works
+		allBooks: async (root, args) => {
+			const books = await Book.find({}).populate('author')
+			if (args.genre) {
+				return books.filter(book => book.genres.includes(args.genre));
+			}
+			return books;
+		}, // works
 		allAuthors: () => Author.find({}), // works
 		me: (root, args, ctx) => ctx.currentUser
 	},
