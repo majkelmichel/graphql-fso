@@ -121,7 +121,7 @@ const resolvers = {
 				}
 				author = newAuthor;
 			}
-			const book = new Book({ ...args, author: author._id });
+			const book = new Book({ ...args, author });
 			try {
 				await book.save();
 			} catch (error) {
