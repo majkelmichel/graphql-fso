@@ -32,7 +32,7 @@ const typeDefs = gql`
     type Book {
         title: String!
         published: Int!
-        author: String!
+        author: Author!
         genres: [String!]!
         id: ID!
     }
@@ -90,17 +90,7 @@ const resolvers = {
 			await Book.find({})).length, // works
 		authorCount: async () => (
 			await Author.find({})).length, // works
-		allBooks: (_root, _args) => {
-			return Book.find({});
-			// let returnedBooks = await Book.find({});
-			// if (args.author) {
-			// 	returnedBooks = returnedBooks.filter(book => args.author === book.author);
-			// }
-			// if (args.genre) {
-			// 	returnedBooks = returnedBooks.filter(book => book.genres.includes(args.genre));
-			// }
-			// return returnedBooks;
-		}, // works
+		allBooks: async (_root, _args) => Book.find({}).populate('author'), // works
 		allAuthors: () => Author.find({}), // works
 		me: (root, args, ctx) => ctx.currentUser
 	},
