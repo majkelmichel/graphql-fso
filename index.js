@@ -1,9 +1,13 @@
-const { ApolloServer, gql, UserInputError } = require('apollo-server');
+const { ApolloServer, gql, UserInputError, AuthenticationError } = require('apollo-server');
 const mongoose = require('mongoose');
 
 const MONGODB_URI = 'mongodb+srv://fullstack:UlrWHyaPB9h2Vftn@cluster0.rzenx.mongodb.net/gql-library?retryWrites=true&w=majority';
 const Book = require('./models/book');
 const Author = require('./models/author');
+const User = require('./models/user');
+
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = '1234567';
 
 mongoose.connect(MONGODB_URI, {
 	useNewUrlParser: true,
@@ -40,11 +44,22 @@ const typeDefs = gql`
         born: Int
     }
 
+    type User {
+        username: String!
+        favoriteGenre: String!
+        id: ID!
+    }
+
+    type Token {
+        value: String!
+    }
+
     type Query {
         bookCount: Int!
         authorCount: Int!
         allBooks(author: String, genre: String): [Book!]!
         allAuthors: [Author!]!
+        me: User
     }
 
     type Mutation {
@@ -58,13 +73,23 @@ const typeDefs = gql`
             name: String!
             setBornTo: Int!
         ): Author
+        createUser(
+            username: String!
+            favoriteGenre: String!
+        ): User
+        login(
+            username: String!
+            password: String!
+        ): Token
     }
 `;
 
 const resolvers = {
 	Query: {
-		bookCount: async () => (await Book.find({})).length, // works
-		authorCount: async () => (await Author.find({})).length, // works
+		bookCount: async () => (
+			await Book.find({})).length, // works
+		authorCount: async () => (
+			await Author.find({})).length, // works
 		allBooks: (_root, _args) => {
 			return Book.find({});
 			// let returnedBooks = await Book.find({});
@@ -76,7 +101,8 @@ const resolvers = {
 			// }
 			// return returnedBooks;
 		}, // works
-		allAuthors: () => Author.find({}) // works
+		allAuthors: () => Author.find({}), // works
+		me: (root, args, ctx) => ctx.currentUser
 	},
 	Author: {
 		bookCount: async (root) => {
@@ -87,7 +113,10 @@ const resolvers = {
 		} // works
 	},
 	Mutation: {
-		addBook: async (root, args) => {
+		addBook: async (root, args, ctx) => {
+			if (!ctx.currentUser) {
+				throw new AuthenticationError('no user logged in');
+			}
 			let author = await Author.findOne({ name: args.author });
 			console.log(author);
 			if (!author) {
@@ -108,11 +137,14 @@ const resolvers = {
 			} catch (error) {
 				throw new UserInputError(error.message, {
 					invalidArgs: args
-				})
+				});
 			}
 			return book;
 		}, // works
-		editAuthor: async (root, args) => {
+		editAuthor: async (root, args, ctx) => {
+			if (!ctx.currentUser) {
+				throw new AuthenticationError('no user logged in');
+			}
 			const author = await Author.findOne({ name: args.name });  // authors.find(a => a.name === args.name);
 			if (!author) {
 				return null;
@@ -120,13 +152,46 @@ const resolvers = {
 			author.born = args.setBornTo;
 			await author.save();
 			return author;
-		} // works
+		}, // works
+		createUser: async (root, args) => {
+			const newUser = new User({ ...args });
+
+			return newUser.save()
+				.catch(err => {
+					throw new UserInputError(err.message, {
+						invalidArgs: args
+					});
+				});
+		},
+		login: async (root, args) => {
+			const user = await User.findOne({ username: args.username });
+			if (!user || args.password !== 'passwd') {
+				throw new UserInputError('wrong credentials');
+			}
+
+			const userForToken = {
+				username: user.username,
+				id: user._id
+			};
+
+			return { value: jwt.sign(userForToken, JWT_SECRET) };
+		}
 	}
 };
 
 const server = new ApolloServer({
 	typeDefs,
-	resolvers
+	resolvers,
+	context: async ({ req }) => {
+		const auth = req ? req.headers.authorization : null;
+		if (auth && auth.toLowerCase().startsWith('bearer ')) {
+			const decodedToken = jwt.verify(
+				auth.substring(7), JWT_SECRET
+			);
+			const currentUser = await User.findById(decodedToken.id);
+			return { currentUser };
+		}
+	}
 });
 
 server.listen().then(({ url }) => {
