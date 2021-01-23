@@ -54,7 +54,14 @@ const Books = (props) => {
 				</tbody>
 			</table>
 			{genres.map(g => <button key={g} onClick={() => setFilter(g)}>{g}</button>)}
-			<button onClick={() => setFilter('all')}>all</button>
+			<button
+				onClick={() => {
+					setFilter('all');
+					result.refetch();
+				}}
+			>
+				all
+			</button>
 		</div>
 	);
 };
