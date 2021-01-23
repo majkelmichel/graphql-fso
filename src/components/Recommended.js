@@ -1,17 +1,20 @@
 import React from 'react';
 import { useQuery } from '@apollo/client';
-import { ALL_BOOKS, FAVORITE_GENRE } from '../queries';
+import { BOOKS_BY_GENRE } from '../queries';
 
 const Recommended = (props) => {
-	const resultFavorite = useQuery(FAVORITE_GENRE);
-	const result = useQuery(ALL_BOOKS);
+	const result = useQuery(BOOKS_BY_GENRE, {
+		variables: {
+			genre: props.fav
+		}
+	});
 
-	if (result.loading || resultFavorite.loading) {
-		return <div>loading...</div>
+	if (result.loading) {
+		return <div>loading...</div>;
 	}
 
 	const books = result.data.allBooks;
-	const favoriteGenre = resultFavorite.data.me.favoriteGenre;
+
 
 	if (!props.show) {
 		return null;
@@ -20,7 +23,7 @@ const Recommended = (props) => {
 	return (
 		<div>
 			<h2>recommended</h2>
-			<p>book in you favorite genre <strong>{favoriteGenre}</strong></p>
+			<p>book in you favorite genre <strong>{props.fav}</strong></p>
 
 			<table>
 				<tbody>
@@ -34,7 +37,6 @@ const Recommended = (props) => {
 					</th>
 				</tr>
 				{books
-					.filter(b => b.genres.includes(favoriteGenre))
 					.map(a =>
 						<tr key={a.title}>
 							<td>{a.title}</td>
@@ -45,7 +47,7 @@ const Recommended = (props) => {
 				</tbody>
 			</table>
 		</div>
-	)
-}
+	);
+};
 
 export default Recommended;

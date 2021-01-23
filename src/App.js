@@ -3,9 +3,10 @@ import Authors from './components/Authors';
 import Books from './components/Books';
 import NewBook from './components/NewBook';
 
-import { useApolloClient } from '@apollo/client';
+import { useApolloClient, useQuery } from '@apollo/client';
 import LoginForm from './components/LoginForm';
 import Recommended from './components/Recommended';
+import { FAVORITE_GENRE } from './queries';
 
 const App = () => {
 	const [ page, setPage ] = useState('authors');
@@ -25,7 +26,13 @@ const App = () => {
 		if (token) {
 			setToken(token)
 		}
-	}, [token])
+	}, [token]);
+
+	const resultFavorite = useQuery(FAVORITE_GENRE);
+
+	if (resultFavorite.loading) {
+		return <div>loading</div>
+	}
 
 	return (
 		<div>
@@ -55,6 +62,7 @@ const App = () => {
 
 			<Recommended
 				show={page === 'recommended'}
+				fav={resultFavorite.data.me.favoriteGenre}
 			/>
 
 			<LoginForm
