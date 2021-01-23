@@ -16,7 +16,7 @@ const LoginForm = (props) => {
 			props.setToken(token);
 			localStorage.setItem('library-user-token', token);
 		}
-	}, [result.data]);
+	}, [result.data, props]);
 
 	if (!props.show) {
 		return null;
