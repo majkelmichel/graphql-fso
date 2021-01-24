@@ -102,15 +102,12 @@ const resolvers = {
 			}
 			return books;
 		}, // works
-		allAuthors: () => Author.find({}), // works
+		allAuthors: () => Author.find({}).populate('books'), // works
 		me: (root, args, ctx) => ctx.currentUser
 	},
 	Author: {
 		bookCount: async (root) => {
-			const author = await Author.findById(root._id);
-
-			const books = await Book.find({ author });
-			return books.length;
+			return root.books.length;
 		} // works
 	},
 	Mutation: {
@@ -139,6 +136,13 @@ const resolvers = {
 				throw new UserInputError(error.message, {
 					invalidArgs: args
 				});
+			}
+
+			author.books = author.books.concat(book._id);
+			try {
+				await author.save()
+			} catch (err) {
+				console.log(err);
 			}
 
 			pubsub.publish('BOOK_ADDED', { bookAdded: book });
