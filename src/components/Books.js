@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
-import { useQuery } from '@apollo/client';
-import { ALL_BOOKS } from '../queries';
+import { useQuery, useSubscription } from '@apollo/client';
+import { ALL_BOOKS, BOOK_ADDED } from '../queries';
 
 const Books = (props) => {
 	const result = useQuery(ALL_BOOKS);
 
 	const [ filter, setFilter ] = useState('all');
+
+	useSubscription(BOOK_ADDED, {
+		onSubscriptionData: () => {
+			result.refetch();
+		}
+	});
 
 	if (result.loading) {
 		return <div>loading...</div>;
