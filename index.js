@@ -1,4 +1,5 @@
-const { ApolloServer, gql, UserInputError, AuthenticationError } = require('apollo-server');
+const { ApolloServer, gql, UserInputError, AuthenticationError, PubSub } = require('apollo-server');
+const pubsub = new PubSub();
 const mongoose = require('mongoose');
 
 const MONGODB_URI = 'mongodb+srv://fullstack:UlrWHyaPB9h2Vftn@cluster0.rzenx.mongodb.net/gql-library?retryWrites=true&w=majority';
@@ -82,6 +83,10 @@ const typeDefs = gql`
             password: String!
         ): Token
     }
+    
+    type Subscription {
+	    bookAdded: Book!
+    }
 `;
 
 const resolvers = {
@@ -135,6 +140,8 @@ const resolvers = {
 					invalidArgs: args
 				});
 			}
+
+			pubsub.publish('BOOK_ADDED', { bookAdded: book });
 			return book;
 		}, // works
 		editAuthor: async (root, args, ctx) => {
@@ -171,6 +178,11 @@ const resolvers = {
 			};
 
 			return { value: jwt.sign(userForToken, JWT_SECRET) };
+		}
+	},
+	Subscription: {
+		bookAdded: {
+			subscribe: () =>pubsub.asyncIterator(['BOOK_ADDED'])
 		}
 	}
 };
